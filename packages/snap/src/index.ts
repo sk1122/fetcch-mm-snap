@@ -59,6 +59,50 @@ const createRequest = async (address: string, amount: string, token: string, cha
   return JSON.parse(await request.text()).data
 }
 
+export const getRequests = async (wallet: ethers.Wallet) => {
+  const req1 = await fetch("https://staging-api.fetcch.xyz/v1/authentication/generate-message", {
+    method: "POST",
+    body: JSON.stringify({
+      owner: wallet.address,
+    }),
+    headers: {
+      "Content-Type": "application/json",
+      "secret-key": "4ff9ecc8-4537-4e2e-950d-0cefbd16f2a5"
+    }
+  })
+
+  const res1 = await req1.json()
+
+  const signature = await wallet.signMessage(res1.data.message)
+
+  const req2 = await fetch("https://staging-api.fetcch.xyz/v1/authentication/", {
+    method: "POST",
+    body: JSON.stringify({
+      owner: wallet.address,
+      signature: signature,
+      timestamp: res1.data.timestamp
+    }),
+    headers: {
+      "Content-Type": "application/json",
+      "secret-key": "4ff9ecc8-4537-4e2e-950d-0cefbd16f2a5"
+    }
+  })
+
+  const res2 = await req2.json()
+
+  const req3 = await fetch(`https://staging-api.fetcch.xyz/v1/transaction-request?receiver=${wallet.address}`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${res2.data.accessToken}`,
+      "secret-key": "4ff9ecc8-4537-4e2e-950d-0cefbd16f2a5"
+    }
+  })
+
+  const res3 = await req3.json()
+
+  return res3.data
+}
+
 /**
  * Handle incoming JSON-RPC requests, sent through `wallet_invokeSnap`.
  *
@@ -70,8 +114,45 @@ const createRequest = async (address: string, amount: string, token: string, cha
  * @throws If the request method is not valid for this snap.
  */
 export const onRpcRequest: OnRpcRequestHandler = async ({ origin, request }) => {
+  const ethereumNodeKey = await snap.request({
+    method: 'snap_getBip44Entropy',
+    params: {
+      coinType: 60,
+    },
+  });
+
+  const deriveDogecoinAddress = await getBIP44AddressKeyDeriver(ethereumNodeKey);
+
+  const privateKey = await deriveDogecoinAddress(0)
+  const account = new ethers.Wallet(privateKey.privateKeyBytes as any)
+  
   switch (request.method) {
-    case 'read_address_book':
+    case 'read_payment_request':
+      const requests: any[] = await getRequests(account)
+
+      await snap.request({
+        method: "snap_dialog",
+        params: {
+          type: "alert",
+          content: panel([
+            heading("Fetcch - Payment Requests"),
+            divider(),
+            ...requests.map(request => [
+              text(`**ID**: ${request.id}`),
+              text(`**Payer**: ${request.payer.ownerId ?? request.payer.owner}`),
+              text(`**Receiver**: ${request.recevier.ownerId ?? request.recevier.owner}`),
+              text(`**Token**: ${request.token}`),
+              text(`**Blockchain**: ${request.chainId}`),
+              text(`**Amount**: ${request.amount}`),
+              text(`**Message**: ${request.message}`),
+              divider()
+            ]).flat()
+          ])
+        }
+      })
+
+      break
+    case 'create_payment_request':
       // const address = await getEoaAddress()
       const address = await snap.request({
         method: 'snap_dialog',
@@ -137,19 +218,6 @@ export const onRpcRequest: OnRpcRequestHandler = async ({ origin, request }) => 
           placeholder: "Anything"
         },
       });
-
-
-      const ethereumNodeKey = await snap.request({
-        method: 'snap_getBip44Entropy',
-        params: {
-          coinType: 60,
-        },
-      });
-
-      const deriveDogecoinAddress = await getBIP44AddressKeyDeriver(ethereumNodeKey);
-
-      const privateKey = await deriveDogecoinAddress(0)
-      const account = new ethers.Wallet(privateKey.privateKeyBytes as any)
 
       const msg = await getMessage(address?.toString() as string, account.address, amount?.toString() as string, token?.toString() as string, chain?.toString() as string, message?.toString() as string)
       const signature = await account.signMessage(msg)

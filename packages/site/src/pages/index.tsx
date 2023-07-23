@@ -5,6 +5,7 @@ import {
   connectSnap,
   getSnap,
   sendHello,
+  sendRead,
   shouldDisplayReconnectButton,
 } from '../utils';
 import {
@@ -126,6 +127,15 @@ const Index = () => {
     }
   };
 
+  const handleSendHelloClick2 = async () => {
+    try {
+      await sendRead();
+    } catch (e) {
+      console.error(e);
+      dispatch({ type: MetamaskActions.SetError, payload: e });
+    }
+  };
+
   return (
     <Container>
       <Heading>
@@ -187,7 +197,7 @@ const Index = () => {
           content={{
             title: 'Create Payment Request',
             description:
-              'Sender payment request to anybody in the world!',
+              'Send payment request to anybody in the world!',
             button: (
               <SendHelloButton
                 onClick={handleSendHelloClick}
@@ -202,6 +212,25 @@ const Index = () => {
             !shouldDisplayReconnectButton(state.installedSnap)
           }
         />
+        <Card
+        content={{
+          title: 'Read Payment Requests',
+          description:
+            'Read received payment request',
+          button: (
+            <SendHelloButton
+              onClick={handleSendHelloClick2}
+              disabled={!state.installedSnap}
+            />
+          ),
+        }}
+        disabled={!state.installedSnap}
+        fullWidth={
+          state.isFlask &&
+          Boolean(state.installedSnap) &&
+          !shouldDisplayReconnectButton(state.installedSnap)
+        }
+      />
       </CardContainer>
     </Container>
   );
