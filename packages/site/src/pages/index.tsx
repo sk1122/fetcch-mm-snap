@@ -129,7 +129,7 @@ const Index = () => {
   return (
     <Container>
       <Heading>
-        Welcome to <Span>template-snap</Span>
+        Welcome to <Span>Fetcch x MM Snap</Span>
       </Heading>
       <Subtitle>
         Get started by editing <code>src/index.ts</code>
@@ -185,9 +185,9 @@ const Index = () => {
         )}
         <Card
           content={{
-            title: 'Send Hello message',
+            title: 'Create Payment Request',
             description:
-              'Display a custom message within a confirmation screen in MetaMask.',
+              'Sender payment request to anybody in the world!',
             button: (
               <SendHelloButton
                 onClick={handleSendHelloClick}
@@ -202,14 +202,6 @@ const Index = () => {
             !shouldDisplayReconnectButton(state.installedSnap)
           }
         />
-        <Notice>
-          <p>
-            Please note that the <b>snap.manifest.json</b> and{' '}
-            <b>package.json</b> must be located in the server root directory and
-            the bundle must be hosted at the location specified by the location
-            field.
-          </p>
-        </Notice>
       </CardContainer>
     </Container>
   );
